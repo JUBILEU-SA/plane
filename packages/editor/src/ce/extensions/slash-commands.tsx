@@ -35,16 +35,26 @@ export const coreEditorAdditionalSlashCommandOptions = (_props: Props): TSlashCo
         }
         const [, workspaceSlug, projectId, pageId] = match;
 
-        // Create subpage via internal API (uses session cookies)
-        fetch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/pages/`, {
+        // Create subpage via internal API in 2 steps:
+        // 1. POST to create page (without parent — Plane's queryset filters parent!=null)
+        // 2. PATCH to set parent
+        const apiBase = `/api/workspaces/${workspaceSlug}/projects/${projectId}/pages`;
+        fetch(`${apiBase}/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Untitled subpage", parent: pageId }),
+          body: JSON.stringify({ name: "Untitled subpage" }),
         })
           .then((res) => {
-            if (!res.ok) throw new Error(`API ${res.status}`);
+            if (!res.ok) throw new Error(`Create failed: ${res.status}`);
             return res.json();
           })
+          .then((page) =>
+            fetch(`${apiBase}/${page.id}/`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ parent: pageId }),
+            }).then(() => page)
+          )
           .then((page) =>
             editor
               .chain()
