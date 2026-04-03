@@ -10,7 +10,7 @@ export type IEditorPropsExtended = unknown;
 
 export type ICollaborativeDocumentEditorPropsExtended = unknown;
 
-export type TExtendedEditorCommands = never;
+export type TExtendedEditorCommands = "subpage";
 
 export type TExtendedCommandExtraProps = unknown;
 
