@@ -27,3 +27,4 @@ export * from "@/types";
 
 // additional exports
 export { TrailingNode } from "./core/extensions/trailing-node";
+export { SUBPAGE_EMBED_NAME } from "./core/extensions/subpage-embed/extension-config";
