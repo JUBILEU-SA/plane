@@ -26,8 +26,11 @@ export const useSubpageCreation = ({ storeType, pageId, projectId, workspaceSlug
   const handleCreateSubpage = useCallback(
     async (event: Event) => {
       const customEvent = event as CustomEvent;
-      const editor = customEvent.detail?.editor;
-      if (!editor || !pageId || !projectId || !workspaceSlug) return;
+      const editorInstance = customEvent.detail?.editor;
+      if (!editorInstance || !pageId || !projectId || !workspaceSlug) {
+        console.warn("[Subpage] Missing context:", { hasEditor: !!editorInstance, pageId, projectId, workspaceSlug });
+        return;
+      }
 
       try {
         const page = await createPage({
@@ -35,22 +38,31 @@ export const useSubpageCreation = ({ storeType, pageId, projectId, workspaceSlug
           parent: pageId,
         });
 
-        if (!page?.id) return;
+        if (!page?.id) {
+          console.warn("[Subpage] createPage returned no page");
+          return;
+        }
 
-        // Insert the subpage embed node with real data from the API
-        editor
-          .chain()
-          .focus()
-          .insertContent({
-            type: SUBPAGE_EMBED_NAME,
-            attrs: {
-              page_id: page.id,
-              page_name: page.name || "Untitled subpage",
-              project_id: projectId,
-              workspace_slug: workspaceSlug,
-            },
-          })
-          .run();
+        // Use requestAnimationFrame to ensure the editor is ready after async operation
+        requestAnimationFrame(() => {
+          try {
+            editorInstance.commands.insertContent({
+              type: SUBPAGE_EMBED_NAME,
+              attrs: {
+                page_id: page.id,
+                page_name: page.name || "Untitled subpage",
+                project_id: projectId,
+                workspace_slug: workspaceSlug,
+              },
+            });
+          } catch (insertError) {
+            console.error("[Subpage] Failed to insert node:", insertError);
+            // Fallback: insert as a link
+            editorInstance.commands.insertContent(
+              `<p><a href="/${workspaceSlug}/projects/${projectId}/pages/${page.id}">${page.name || "Untitled subpage"}</a></p>`
+            );
+          }
+        });
       } catch (error) {
         console.error("[Subpage] Failed to create subpage:", error);
       }
